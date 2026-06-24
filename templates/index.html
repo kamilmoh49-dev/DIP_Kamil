@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aplikasi Pengolahan Citra Digital Interaktif</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .interactive-area {
+            touch-action: none; 
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        @keyframes flipFeedback {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        
+        .flip-animation {
+            animation: flipFeedback 0.2s ease;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .mode-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            z-index: 20;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+        .mode-indicator.show {
+            opacity: 1;
+        }
+
+        .tips-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        .tips-overlay.active {
+            display: flex;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .tips-modal {
+            background: white;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .tips-modal h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tips-modal .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            color: #a0aec0;
+            cursor: pointer;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        .tips-modal .close-btn:hover {
+            color: #2d3748;
+        }
+        
+        .tips-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .tips-item:last-child {
+            border-bottom: none;
+        }
+        .tips-item .icon {
+            font-size: 20px;
+            min-width: 36px;
+            height: 36px;
+            background: #ebf8ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tips-item .content {
+            flex: 1;
+        }
+        .tips-item .content .title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #2d3748;
+        }
+        .tips-item .content .desc {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 2px;
+        }
+        
+        .tips-trigger {
+            background: #edf2f7;
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .tips-trigger:hover {
+            background: #e2e8f0;
+            border-color: #a0aec0;
+            transform: translateY(-2px);
+        }
+        .tips-trigger:active {
+            transform: scale(0.98);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .btn-loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen py-10 px-4">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-2">Aplikasi Pengolahan Citra</h1>
+        <p class="text-center text-gray-500 text-sm mb-8">Ujian Akhir: Manipulasi Geometri Dinamis Total (Mobile & PC Friendly)</p>
+        
+        <form action="/" method="POST" enctype="multipart/form-data" class="space-y-6 mb-8">
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 bg-gray-50 flex flex-col justify-center items-center max-w-xl mx-auto">
+                <label class="block text-sm font-semibold text-gray-600 mb-2">Pilih Gambar dari Perangkat:</label>
+                <input type="file" name="file" accept="image/*" class="text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-4" required>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-8 rounded-lg shadow-md transition w-full">
+                    Upload & Analisis Citra
+                </button>
+            </div>
+        </form>
+
+        {% if info %}
+            <hr class="my-6 border-gray-200">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="flex flex-col space-y-4">
+                    <div class="flex flex-col items-center justify-center bg-gray-900 p-4 rounded-xl border border-gray-700 shadow-inner relative overflow-hidden h-[380px]">
+                        <h3 class="absolute top-2 left-3 text-xs font-semibold text-gray-400 z-10">Kanvas Interaktif</h3>
+                        
+                        <div id="modeIndicator" class="mode-indicator">🖐️ Geser</div>
+                        
+                        <div id="canvas-container" class="interactive-area w-full h-full flex items-center justify-center cursor-grab relative">
+                            <img id="target-img" src="{{ info.img_data }}" alt="Uploaded Image" class="max-w-full max-h-full object-contain pointer-events-none origin-center transition-transform duration-75 ease-out">
+                        </div>
+                    </div>
+
+                    <!-- Tombol Kontrol -->
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+                        <button onclick="flipImage('horizontal')" class="bg-green-100 border border-green-300 hover:bg-green-200 p-2.5 rounded shadow-sm text-green-700 transition">
+                            ↔️ Flip H
+                        </button>
+                        <button onclick="flipImage('vertical')" class="bg-green-100 border border-green-300 hover:bg-green-200 p-2.5 rounded shadow-sm text-green-700 transition">
+                            ↕️ Flip V
+                        </button>
+                        <button onclick="resetAll()" id="btnReset" class="bg-red-100 border border-red-300 hover:bg-red-200 p-2.5 rounded shadow-sm text-red-700 transition font-bold">
+                            🔄 Reset
+                        </button>
+                    </div>
+
+                    <!-- Tombol Konversi Citra -->
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-xs font-bold uppercase text-gray-400 mb-2">Konversi Citra</p>
+                        <div class="grid grid-cols-2 gap-2 text-center text-xs font-semibold">
+                            <button onclick="showGrayscaleSlider()" id="btnGrayscale" 
+                                class="bg-blue-100 border border-blue-300 hover:bg-blue-200 p-2.5 rounded shadow-sm text-blue-700 transition">
+                                ⚪ Grayscale
+                            </button>
+                            <button onclick="showThresholdSlider()" id="btnBinary" 
+                                class="bg-blue-100 border border-blue-300 hover:bg-blue-200 p-2.5 rounded shadow-sm text-blue-700 transition">
+                                ⬛ Biner (Manual)
+                            </button>
+                            <button onclick="showNegativeSlider()" id="btnNegative" 
+                                class="bg-purple-100 border border-purple-300 hover:bg-purple-200 p-2.5 rounded shadow-sm text-purple-700 transition">
+                                🎨 Negatif
+                            </button>
+                            <button onclick="showBrightnessSlider()" id="btnBrightness" 
+                                class="bg-purple-100 border border-purple-300 hover:bg-purple-200 p-2.5 rounded shadow-sm text-purple-700 transition">
+                                ☀️ Brightness
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Slider Grayscale -->
+                    <div id="grayscaleContainer" style="display: none;" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-xs font-bold uppercase text-gray-400 mb-2">Atur Intensitas Grayscale (0-100%)</p>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="grayscaleSlider" min="0" max="100" value="100" 
+                                class="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <span id="grayscaleValue" class="text-sm font-bold text-blue-600 min-w-[40px] text-center">100%</span>
+                        </div>
+                        <button onclick="convertImage('grayscale')" 
+                            class="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+                            Terapkan Grayscale
+                        </button>
+                        <button onclick="hideGrayscaleSlider()" 
+                            class="mt-1 w-full text-gray-500 hover:text-gray-700 text-xs font-medium">
+                            ✕ Tutup
+                        </button>
+                    </div>
+
+                    <!-- Slider Threshold -->
+                    <div id="thresholdContainer" style="display: none;" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-xs font-bold uppercase text-gray-400 mb-2">Atur Threshold (0-255)</p>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="thresholdSlider" min="0" max="255" value="127" 
+                                class="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <span id="thresholdValue" class="text-sm font-bold text-blue-600 min-w-[40px] text-center">127</span>
+                        </div>
+                        <button onclick="convertImage('binary')" 
+                            class="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+                            Terapkan Threshold
+                        </button>
+                        <button onclick="hideThresholdSlider()" 
+                            class="mt-1 w-full text-gray-500 hover:text-gray-700 text-xs font-medium">
+                            ✕ Tutup
+                        </button>
+                    </div>
+
+                    <!-- Slider Brightness -->
+                    <div id="brightnessContainer" style="display: none;" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-xs font-bold uppercase text-gray-400 mb-2">Atur Brightness (-255 s/d 255)</p>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="brightnessSlider" min="-255" max="255" value="0" 
+                                class="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <span id="brightnessValue" class="text-sm font-bold text-blue-600 min-w-[40px] text-center">0</span>
+                        </div>
+                        <button onclick="convertImage('brightness')" 
+                            class="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+                            Terapkan Brightness
+                        </button>
+                        <button onclick="hideBrightnessSlider()" 
+                            class="mt-1 w-full text-gray-500 hover:text-gray-700 text-xs font-medium">
+                            ✕ Tutup
+                        </button>
+                    </div>
+
+                    <!-- Slider Negative -->
+                    <div id="negativeContainer" style="display: none;" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-xs font-bold uppercase text-gray-400 mb-2">Atur Intensitas Negatif (0-100%)</p>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="negativeSlider" min="0" max="100" value="100" 
+                                class="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <span id="negativeValue" class="text-sm font-bold text-purple-600 min-w-[40px] text-center">100%</span>
+                        </div>
+                        <button onclick="convertImage('negative')" 
+                            class="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+                            Terapkan Negatif
+                        </button>
+                        <button onclick="hideNegativeSlider()" 
+                            class="mt-1 w-full text-gray-500 hover:text-gray-700 text-xs font-medium">
+                            ✕ Tutup
+                        </button>
+                    </div>
+
+                    <div class="tips-trigger" onclick="showTips()">
+                        💡 Klik untuk melihat Tips Interaksi
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-lg font-bold text-gray-700">Informasi Dasar Citra:</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <span class="block text-xs font-bold uppercase text-gray-400">Nama File</span>
+                            <span id="filename-display" class="text-sm font-medium text-gray-700 break-all">{{ info.filename }}</span>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <span class="block text-xs font-bold uppercase text-gray-400">Ukuran File</span>
+                            <span class="text-sm font-medium text-gray-700">{{ info.ukuran }}</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <span class="block text-xs font-bold uppercase text-gray-400">Resolusi Matriks Asli (L x T)</span>
+                        <span class="text-sm font-semibold text-gray-800">{{ info.resolusi }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <span class="block text-xs font-bold uppercase text-gray-400">Channel Warna</span>
+                        <span id="channels-display" class="text-sm font-medium text-gray-800">{{ info.channels }}</span>
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <span class="block text-xs font-bold uppercase text-blue-500 mb-1">Contoh Nilai Piksel Tengah</span>
+                        <span class="text-sm font-mono font-bold text-blue-900 block bg-white p-2 rounded border border-blue-100">{{ info.piksel }}</span>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                        <span class="block text-xs font-bold uppercase text-purple-500 mb-1">Status Transformasi</span>
+                        <div id="transform-info" class="text-xs font-mono text-purple-800 space-y-0.5">
+                            <div>Rotasi: <span id="rotation-display" class="font-bold">0</span>°</div>
+                            <div>Zoom: <span id="scale-display" class="font-bold">100</span>%</div>
+                            <div>Translasi (X, Y): <span id="translate-display" class="font-bold text-indigo-700">(0, 0)</span></div>
+                            <div>Flip: <span id="flip-display" class="font-bold">Normal</span></div>
+                            <div>Mode: <span id="mode-display" class="font-bold text-blue-600">🖐️ Geser</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-center text-gray-400 italic mt-8">Silakan upload gambar terlebih dahulu untuk memulai pengujian.</p>
+        {% endif %}
+    </div>
+
+    <!-- Modal/Popup Tips Interaksi -->
+    <div id="tipsModal" class="tips-overlay" onclick="if(event.target===this) closeTips()">
+        <div class="tips-modal">
+            <button class="close-btn" onclick="closeTips()">×</button>
+            
+            <h2>
+                <span>💡</span> Tips Interaksi
+            </h2>
+            
+            <div class="tips-item">
+                <div class="icon">🖐️</div>
+                <div class="content">
+                    <div class="title">Geser Gambar</div>
+                    <div class="desc">Klik & drag di area <b>tengah gambar</b> (PC) atau geser dengan 1 jari (HP)</div>
+                </div>
+            </div>
+            
+            <div class="tips-item">
+                <div class="icon">🔄</div>
+                <div class="content">
+                    <div class="title">Rotasi Bebas 360°</div>
+                    <div class="desc">Klik & putar di area <b>pinggir/pojok gambar</b> (PC) atau putar dengan 2 jari (HP)</div>
+                </div>
+            </div>
+            
+            <div class="tips-item">
+                <div class="icon">🔍</div>
+                <div class="content">
+                    <div class="title">Zoom In / Out</div>
+                    <div class="desc">Scroll mouse (PC) atau <b>pinch</b> dengan 2 jari (HP)</div>
+                </div>
+            </div>
+            
+            <div class="tips-item">
+                <div class="icon">↔️</div>
+                <div class="content">
+                    <div class="title">Flip Gambar</div>
+                    <div class="desc">Klik tombol <b>Flip H/V</b> atau <b>swipe cepat</b> ke kiri/kanan/atas/bawah (HP)</div>
+                </div>
+            </div>
+            
+            <div class="tips-item">
+                <div class="icon">⚪</div>
+                <div class="content">
+                    <div class="title">Konversi Citra</div>
+                    <div class="desc">
+                        <b>Grayscale</b> = Ubah ke hitam-putih-keabuan (0-100% intensitas)<br>
+                        <b>Biner (Manual)</b> = Ubah ke biner dengan threshold sendiri (0-255)<br>
+                        <b>Negatif</b> = Ubah ke warna negatif (0-100% intensitas)<br>
+                        <b>Brightness</b> = Atur kecerahan gambar (-255 s/d 255)
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tips-item">
+                <div class="icon">🔄</div>
+                <div class="content">
+                    <div class="title">Reset</div>
+                    <div class="desc">
+                        Tombol <b>Reset</b> = Reset posisi/zoom/rotasi/flip <b>DAN</b> kembali ke gambar asli (warna)
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tips-item">
+                <div class="icon">⌨️</div>
+                <div class="content">
+                    <div class="title">Shortcut Keyboard (PC)</div>
+                    <div class="desc">
+                        <b>R</b> = Reset Semua &nbsp;|&nbsp; <b>H</b> = Flip Horizontal<br>
+                        <b>V</b> = Flip Vertikal
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tips-item" style="border-bottom: none; padding-bottom: 0;">
+                <div class="icon">📱</div>
+                <div class="content">
+                    <div class="title">Mode Indikator</div>
+                    <div class="desc">Akan muncul di pojok kanan bawah gambar untuk menunjukkan mode aktif (Geser/Rotasi)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const img = document.getElementById('target-img');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const modeDisplay = document.getElementById('mode-display');
+
+        // Simpan nama file asli
+        const filenameDisplay = document.getElementById('filename-display');
+        const currentFilename = filenameDisplay ? filenameDisplay.textContent : 'image.jpg';
+
+        window.showTips = function() {
+            const modal = document.getElementById('tipsModal');
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        window.closeTips = function() {
+            const modal = document.getElementById('tipsModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeTips();
+            }
+        });
+
+        // ============ RESET SEMUA ============
+
+        window.resetAll = function() {
+            const btn = document.getElementById('btnReset');
+            btn.classList.add('btn-loading');
+            btn.innerHTML = '<span class="loading-spinner"></span> Mereset...';
+
+            if (typeof resetTransform === 'function') {
+                resetTransform();
+            }
+
+            fetch('/reset_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filename: currentFilename
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '🔄 Reset';
+
+                if (data.success) {
+                    img.src = data.image_data;
+
+                    const channelsDisplay = document.getElementById('channels-display');
+                    if (channelsDisplay) {
+                        channelsDisplay.textContent = '3 (Color - BGR)';
+                    }
+
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification('Error: ' + (data.error || 'Gagal reset'), 'error');
+                }
+            })
+            .catch(error => {
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '🔄 Reset';
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
+
+        // ============ SLIDER FUNGSI ============
+
+        // Grayscale
+        window.showGrayscaleSlider = function() {
+            document.getElementById('grayscaleContainer').style.display = 'block';
+            document.getElementById('thresholdContainer').style.display = 'none';
+            document.getElementById('brightnessContainer').style.display = 'none';
+            document.getElementById('negativeContainer').style.display = 'none';
+            document.getElementById('grayscaleContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        window.hideGrayscaleSlider = function() {
+            document.getElementById('grayscaleContainer').style.display = 'none';
+        }
+
+        const grayscaleSlider = document.getElementById('grayscaleSlider');
+        if (grayscaleSlider) {
+            grayscaleSlider.addEventListener('input', function() {
+                const val = parseInt(this.value);
+                document.getElementById('grayscaleValue').textContent = val + '%';
+                const el = document.getElementById('grayscaleValue');
+                if (val === 0) {
+                    el.style.color = '#dc2626';
+                } else if (val === 100) {
+                    el.style.color = '#16a34a';
+                } else {
+                    el.style.color = '#f59e0b';
+                }
+            });
+        }
+
+        // Threshold
+        window.showThresholdSlider = function() {
+            document.getElementById('thresholdContainer').style.display = 'block';
+            document.getElementById('grayscaleContainer').style.display = 'none';
+            document.getElementById('brightnessContainer').style.display = 'none';
+            document.getElementById('negativeContainer').style.display = 'none';
+            document.getElementById('thresholdContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        window.hideThresholdSlider = function() {
+            document.getElementById('thresholdContainer').style.display = 'none';
+        }
+
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        if (thresholdSlider) {
+            thresholdSlider.addEventListener('input', function() {
+                document.getElementById('thresholdValue').textContent = this.value;
+            });
+        }
+
+        // Brightness
+        window.showBrightnessSlider = function() {
+            document.getElementById('brightnessContainer').style.display = 'block';
+            document.getElementById('grayscaleContainer').style.display = 'none';
+            document.getElementById('thresholdContainer').style.display = 'none';
+            document.getElementById('negativeContainer').style.display = 'none';
+            document.getElementById('brightnessContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        window.hideBrightnessSlider = function() {
+            document.getElementById('brightnessContainer').style.display = 'none';
+        }
+
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        if (brightnessSlider) {
+            brightnessSlider.addEventListener('input', function() {
+                const val = parseInt(this.value);
+                document.getElementById('brightnessValue').textContent = val;
+                const el = document.getElementById('brightnessValue');
+                if (val > 0) {
+                    el.style.color = '#16a34a';
+                } else if (val < 0) {
+                    el.style.color = '#dc2626';
+                } else {
+                    el.style.color = '#3b82f6';
+                }
+            });
+        }
+
+        // Negative
+        window.showNegativeSlider = function() {
+            document.getElementById('negativeContainer').style.display = 'block';
+            document.getElementById('grayscaleContainer').style.display = 'none';
+            document.getElementById('thresholdContainer').style.display = 'none';
+            document.getElementById('brightnessContainer').style.display = 'none';
+            document.getElementById('negativeContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        window.hideNegativeSlider = function() {
+            document.getElementById('negativeContainer').style.display = 'none';
+        }
+
+        const negativeSlider = document.getElementById('negativeSlider');
+        if (negativeSlider) {
+            negativeSlider.addEventListener('input', function() {
+                document.getElementById('negativeValue').textContent = this.value + '%';
+            });
+        }
+
+        // ============ KONVERSI CITRA ============
+
+        window.convertImage = function(type) {
+            const imgElement = document.getElementById('target-img');
+            
+            const btnMap = {
+                'grayscale': 'btnGrayscale',
+                'binary': 'btnBinary',
+                'negative': 'btnNegative',
+                'brightness': 'btnBrightness'
+            };
+            const btnId = btnMap[type];
+            if (btnId) {
+                const btn = document.getElementById(btnId);
+                btn.classList.add('btn-loading');
+                btn.innerHTML = '<span class="loading-spinner"></span> Memproses...';
+            }
+            
+            let endpoint = '';
+            let body = {
+                filename: currentFilename
+            };
+            
+            if (type === 'grayscale') {
+                endpoint = '/convert/grayscale';
+                body.intensity = parseInt(document.getElementById('grayscaleSlider').value);
+            } else if (type === 'binary') {
+                endpoint = '/convert/binary';
+                body.threshold = parseInt(document.getElementById('thresholdSlider').value);
+            } else if (type === 'negative') {
+                endpoint = '/convert/negative';
+                body.intensity = parseInt(document.getElementById('negativeSlider').value);
+            } else if (type === 'brightness') {
+                endpoint = '/convert/brightness';
+                body.brightness = parseInt(document.getElementById('brightnessSlider').value);
+            }
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (btnId) {
+                    const btn = document.getElementById(btnId);
+                    btn.classList.remove('btn-loading');
+                    if (type === 'grayscale') btn.innerHTML = '⚪ Grayscale';
+                    else if (type === 'binary') btn.innerHTML = '⬛ Biner (Manual)';
+                    else if (type === 'negative') btn.innerHTML = '🎨 Negatif';
+                    else if (type === 'brightness') btn.innerHTML = '☀️ Brightness';
+                }
+                
+                if (data.success) {
+                    imgElement.src = data.image_data;
+                    
+                    const channelsDisplay = document.getElementById('channels-display');
+                    if (channelsDisplay) {
+                        if (type === 'grayscale') {
+                            const intensity = parseInt(document.getElementById('grayscaleSlider').value);
+                            if (intensity === 100) {
+                                channelsDisplay.textContent = '1 (Grayscale)';
+                            } else if (intensity === 0) {
+                                channelsDisplay.textContent = '3 (Color - Original)';
+                            } else {
+                                channelsDisplay.textContent = `3 (Grayscale ${intensity}%)`;
+                            }
+                        } else if (type === 'binary') {
+                            channelsDisplay.textContent = '1 (Binary)';
+                        } else if (type === 'negative') {
+                            channelsDisplay.textContent = '3 (Negative)';
+                        } else if (type === 'brightness') {
+                            const currentText = channelsDisplay.textContent;
+                            if (!currentText.includes('Grayscale') && !currentText.includes('Binary')) {
+                                channelsDisplay.textContent = '3 (Color - Adjusted)';
+                            }
+                        }
+                    }
+                    
+                    showNotification(data.message, 'success');
+                    
+                    if (typeof resetTransform === 'function') {
+                        resetTransform();
+                    }
+                    
+                    hideGrayscaleSlider();
+                    hideThresholdSlider();
+                    hideBrightnessSlider();
+                    hideNegativeSlider();
+                } else {
+                    showNotification('Error: ' + (data.error || 'Gagal konversi'), 'error');
+                }
+            })
+            .catch(error => {
+                if (btnId) {
+                    const btn = document.getElementById(btnId);
+                    btn.classList.remove('btn-loading');
+                    if (type === 'grayscale') btn.innerHTML = '⚪ Grayscale';
+                    else if (type === 'binary') btn.innerHTML = '⬛ Biner (Manual)';
+                    else if (type === 'negative') btn.innerHTML = '🎨 Negatif';
+                    else if (type === 'brightness') btn.innerHTML = '☀️ Brightness';
+                }
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const oldNotif = document.querySelector('.custom-notification');
+            if (oldNotif) oldNotif.remove();
+            
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            const notif = document.createElement('div');
+            notif.className = `custom-notification fixed top-4 left-1/2 transform -translate-x-1/2 ${colors[type] || 'bg-blue-500'} text-white px-6 py-3 rounded-lg shadow-lg z-[1000] text-sm font-medium transition-all duration-300`;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                notif.style.transform = 'translate(-50%, -20px)';
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+
+        // ============ INTERAKSI GAMBAR ============
+
+        if (container && img) {
+            let scale = 1;
+            let pointX = 0;
+            let pointY = 0;
+            let rotation = 0;
+            let flipX = 1;
+            let flipY = 1;
+
+            let isDragging = false;
+            let isRotating = false;
+            let startX = 0, startY = 0;
+            let touchStartDist = 0;
+            let touchStartAngle = 0;
+            let lastAngle = 0;
+            let currentMode = 'translate';
+            
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartTime = 0;
+            let swipeHistory = [];
+
+            function setMode(mode) {
+                currentMode = mode;
+                if (mode === 'translate') {
+                    modeIndicator.textContent = '🖐️ Geser';
+                    modeIndicator.className = 'mode-indicator show bg-blue-600';
+                    if (modeDisplay) modeDisplay.textContent = '🖐️ Geser';
+                    container.style.cursor = 'grab';
+                } else {
+                    modeIndicator.textContent = '🔄 Rotasi';
+                    modeIndicator.className = 'mode-indicator show bg-green-600';
+                    if (modeDisplay) modeDisplay.textContent = '🔄 Rotasi';
+                    container.style.cursor = 'grabbing';
+                }
+                
+                clearTimeout(modeIndicator._timeout);
+                modeIndicator._timeout = setTimeout(() => {
+                    modeIndicator.className = 'mode-indicator';
+                }, 1000);
+            }
+
+            function updateTransform() {
+                img.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale * flipX}, ${scale * flipY}) rotate(${rotation}deg)`;
+                updateInfoDisplay();
+            }
+
+            function updateInfoDisplay() {
+                const rotDisplay = document.getElementById('rotation-display');
+                const scaleDisplay = document.getElementById('scale-display');
+                const translateDisplay = document.getElementById('translate-display');
+                const flipDisplay = document.getElementById('flip-display');
+                
+                if (rotDisplay) {
+                    let rot = Math.round(rotation % 360);
+                    if (rot < 0) rot += 360;
+                    rotDisplay.textContent = rot;
+                }
+                if (scaleDisplay) {
+                    scaleDisplay.textContent = Math.round(scale * 100);
+                }
+                if (translateDisplay) {
+                    const xVal = Math.round(pointX);
+                    const yVal = Math.round(pointY);
+                    if (xVal === 0 && yVal === 0) {
+                        translateDisplay.textContent = '(0, 0)';
+                        translateDisplay.className = 'font-bold text-gray-500';
+                    } else {
+                        translateDisplay.textContent = `(${xVal}, ${yVal})`;
+                        translateDisplay.className = 'font-bold text-indigo-700';
+                    }
+                }
+                if (flipDisplay) {
+                    if (flipX === -1 && flipY === -1) flipDisplay.textContent = 'Horizontal & Vertikal';
+                    else if (flipX === -1) flipDisplay.textContent = 'Horizontal (Kiri-Kanan)';
+                    else if (flipY === -1) flipDisplay.textContent = 'Vertikal (Atas-Bawah)';
+                    else flipDisplay.textContent = 'Normal';
+                }
+            }
+
+            function animateFlip() {
+                img.classList.remove('flip-animation');
+                void img.offsetWidth;
+                img.classList.add('flip-animation');
+            }
+
+            window.flipImage = function(direction) {
+                if (direction === 'horizontal') {
+                    flipX = flipX === 1 ? -1 : 1;
+                } else if (direction === 'vertical') {
+                    flipY = flipY === 1 ? -1 : 1;
+                }
+                animateFlip();
+                updateTransform();
+                if (navigator.vibrate) navigator.vibrate(30);
+            }
+
+            window.resetTransform = function() {
+                scale = 1;
+                pointX = 0;
+                pointY = 0;
+                rotation = 0;
+                flipX = 1;
+                flipY = 1;
+                animateFlip();
+                updateTransform();
+                if (navigator.vibrate) navigator.vibrate(20);
+                setMode('translate');
+            }
+
+            // MOUSE EVENTS
+            container.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging = true;
+                
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                const dx = e.clientX - centerX;
+                const dy = e.clientY - centerY;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                const threshold = Math.min(rect.width, rect.height) * 0.35;
+                
+                if (distance < threshold) {
+                    isRotating = false;
+                    startX = e.clientX - pointX;
+                    startY = e.clientY - pointY;
+                    setMode('translate');
+                } else {
+                    isRotating = true;
+                    lastAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+                    setMode('rotate');
+                }
+            });
+
+            window.addEventListener('mouseup', () => { 
+                isDragging = false; 
+                isRotating = false;
+            });
+            
+            container.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                if (isRotating) {
+                    const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+                    let angleDiff = currentAngle - lastAngle;
+                    if (angleDiff > 180) angleDiff -= 360;
+                    if (angleDiff < -180) angleDiff += 360;
+                    rotation += angleDiff;
+                    lastAngle = currentAngle;
+                    updateTransform();
+                } else {
+                    pointX = e.clientX - startX;
+                    pointY = e.clientY - startY;
+                    updateTransform();
+                }
+            });
+
+            container.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                resetAll();
+            });
+
+            // TOUCH EVENTS
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    const dx = e.touches[0].clientX - centerX;
+                    const dy = e.touches[0].clientY - centerY;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    
+                    const threshold = Math.min(rect.width, rect.height) * 0.35;
+                    
+                    if (distance < threshold) {
+                        isRotating = false;
+                        startX = e.touches[0].clientX - pointX;
+                        startY = e.touches[0].clientY - pointY;
+                        setMode('translate');
+                    } else {
+                        isRotating = true;
+                        lastAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX) * 180 / Math.PI;
+                        setMode('rotate');
+                    }
+                    
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchStartTime = Date.now();
+                    swipeHistory = [];
+                    
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    isRotating = true;
+                    setMode('rotate');
+                    
+                    touchStartDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    
+                    touchStartAngle = Math.atan2(
+                        e.touches[0].clientY - e.touches[1].clientY,
+                        e.touches[0].clientX - e.touches[1].clientX
+                    ) * 180 / Math.PI;
+                }
+            });
+
+            container.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+
+                if (e.touches.length === 1 && isDragging) {
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    if (isRotating) {
+                        const currentAngle = Math.atan2(
+                            e.touches[0].clientY - centerY,
+                            e.touches[0].clientX - centerX
+                        ) * 180 / Math.PI;
+                        
+                        let angleDiff = currentAngle - lastAngle;
+                        if (angleDiff > 180) angleDiff -= 360;
+                        if (angleDiff < -180) angleDiff += 360;
+                        
+                        rotation += angleDiff;
+                        lastAngle = currentAngle;
+                        updateTransform();
+                    } else {
+                        pointX = e.touches[0].clientX - startX;
+                        pointY = e.touches[0].clientY - startY;
+                        updateTransform();
+                    }
+                    
+                    swipeHistory.push({
+                        x: e.touches[0].clientX,
+                        y: e.touches[0].clientY,
+                        time: Date.now()
+                    });
+                    if (swipeHistory.length > 10) swipeHistory.shift();
+                    
+                } else if (e.touches.length === 2) {
+                    const dist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const factor = dist / touchStartDist;
+                    scale = Math.max(0.2, Math.min(6, scale * factor));
+                    touchStartDist = dist;
+
+                    const currentAngle = Math.atan2(
+                        e.touches[0].clientY - e.touches[1].clientY,
+                        e.touches[0].clientX - e.touches[1].clientX
+                    ) * 180 / Math.PI;
+                    
+                    let angleDiff = currentAngle - touchStartAngle;
+                    if (angleDiff > 180) angleDiff -= 360;
+                    if (angleDiff < -180) angleDiff += 360;
+                    
+                    rotation += angleDiff;
+                    touchStartAngle = currentAngle;
+
+                    updateTransform();
+                }
+            });
+
+            container.addEventListener('touchend', (e) => {
+                if (isDragging && !isRotating && e.changedTouches.length > 0) {
+                    if (swipeHistory.length > 3) {
+                        const start = swipeHistory[0];
+                        const end = swipeHistory[swipeHistory.length - 1];
+                        const deltaX = end.x - start.x;
+                        const deltaY = end.y - start.y;
+                        const deltaTime = end.time - start.time;
+                        const distance = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+                        const speed = distance / deltaTime;
+                        
+                        const minDistance = 60;
+                        const minSpeed = 0.15;
+                        
+                        if (distance > minDistance && speed > minSpeed) {
+                            const ratio = Math.abs(deltaX) / Math.abs(deltaY);
+                            
+                            if (ratio > 1.5) {
+                                flipX = flipX === 1 ? -1 : 1;
+                                animateFlip();
+                                updateTransform();
+                                if (navigator.vibrate) navigator.vibrate(30);
+                            } else if (ratio < 0.67) {
+                                flipY = flipY === 1 ? -1 : 1;
+                                animateFlip();
+                                updateTransform();
+                                if (navigator.vibrate) navigator.vibrate(30);
+                            }
+                        }
+                    }
+                }
+                
+                isDragging = false;
+                isRotating = false;
+                setMode('translate');
+            });
+
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = 0.1;
+                if (e.deltaY < 0) {
+                    scale = Math.min(6, scale + zoomFactor);
+                } else {
+                    scale = Math.max(0.2, scale - zoomFactor);
+                }
+                updateTransform();
+            }, { passive: false });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    resetAll();
+                    e.preventDefault();
+                }
+                if (e.key === 'h' || e.key === 'H') {
+                    flipImage('horizontal');
+                    e.preventDefault();
+                }
+                if (e.key === 'v' || e.key === 'V') {
+                    flipImage('vertical');
+                    e.preventDefault();
+                }
+            });
+
+            updateInfoDisplay();
+            setMode('translate');
+            
+            console.log('🎯 Aplikasi siap digunakan!');
+            console.log('📌 Klik "Tips Interaksi" untuk melihat panduan lengkap');
+        }
+    </script>
+</body>
+</html>
