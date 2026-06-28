@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html class="light" lang="id">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>CitraLite - Image Processor</title>
+    <!-- Chart.js untuk Histogram -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+    <!-- Font Georgia -->
+    <link href="https://fonts.googleapis.com/css2?family=Georgia&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries">
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#eff4ff",
+                        "surface-container": "#e5eeff",
+                        "secondary": "#52625c",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#3c4a42",
+                        "primary-container": "#10b981",
+                        "secondary-container": "#d3e3dc",
+                        "on-primary-container": "#00422b",
+                        "on-secondary-fixed-variant": "#3b4a44",
+                        "tertiary-container": "#3eb686",
+                        "background": "#f8f9ff",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#d5e6df",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#4edea3",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container-high": "#dce9ff",
+                        "tertiary-fixed-dim": "#68dba9",
+                        "outline-variant": "#bbcabf",
+                        "primary": "#006c49",
+                        "on-background": "#0b1c30",
+                        "on-error": "#ffffff",
+                        "outline": "#6c7a71",
+                        "surface-dim": "#cbdbf5",
+                        "on-primary-fixed-variant": "#005236",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#566660",
+                        "tertiary": "#006c4a",
+                        "inverse-surface": "#213145",
+                        "on-tertiary-container": "#00422c",
+                        "secondary-fixed-dim": "#bacac3",
+                        "on-secondary-fixed": "#101e1a",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#0b1c30",
+                        "surface-tint": "#006c49",
+                        "surface-bright": "#f8f9ff",
+                        "on-primary-fixed": "#002113",
+                        "tertiary-fixed": "#85f8c4",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005137",
+                        "surface": "#f8f9ff",
+                        "primary-fixed": "#6ffbbe",
+                        "primary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed": "#002114",
+                        "surface-container-highest": "#d3e4fe"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "margin-desktop": "32px",
+                        "lg": "24px",
+                        "2xl": "48px",
+                        "base": "4px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Georgia"],
+                        "label-md": ["Georgia"],
+                        "display": ["Georgia"],
+                        "headline-md": ["Georgia"],
+                        "headline-lg": ["Georgia"],
+                        "headline-sm": ["Georgia"],
+                        "label-sm": ["Georgia"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Reset & Base */
+        * {
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+        }
+
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined' !important;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            user-select: none;
+        }
+
+        .canvas-bg {
+            background-image: radial-gradient(#bbcabf 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            background: #d3e3dc;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -5px;
+            background-color: #006c49;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #bbcabf;
+            border-radius: 10px;
+        }
+
+        .dashboard-bg {
+            background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAXMjGZO4NhxbKZswb52uyBGtdms_FGkcKOJEoSyWgGUOtfonZ9W3HzvIAWsrcPOtUJ2sPaUa6g0NU9qsJKE0-sETcKdlWswEU3Xzs_bBYVWsnPmJDF7wCd6BlepdKvbHxu8mkBY5aWVc0WXJCmQXfxCh7hnrY4vKaaiIEBvfXJrT8w707mff9_ykzPen11GpnVFamA6IC7fHrEPwrD7wo-1tdWerhNe-EUgECww0i5vS2shZSqOZnazBSYWR0oGswKOR0ynq0jCSg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 9999;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+        }
+        .toast-success {
+            background: #006c49;
+        }
+        .toast-error {
+            background: #ba1a1a;
+        }
+        .toast-info {
+            background: #1a73e8;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Canvas Container */
+        #canvas-container {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            cursor: grab;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+
+        #target-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            transform-origin: center center;
+            transition: none;
+            will-change: transform;
+        }
+
+        /* Mode Indicator */
+        .mode-indicator {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .mode-indicator.show {
+            opacity: 1;
+        }
+
+        @keyframes flipFeedback {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(0.92);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .flip-animation {
+            animation: flipFeedback 0.2s ease;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Button Reset All */
+        .btn-reset-all {
+            background: #dc2626;
+            color: white !important;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 16px;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-reset-all:hover {
+            background: #b91c1c;
+            transform: scale(1.02);
+        }
+        .btn-reset-all:active {
+            transform: scale(0.95);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 14px;
+            color: #64748b;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(187, 202, 191, 0.3);
+        }
+        .status-bar span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .status-bar .label {
+            font-weight: 600;
+            color: #334155;
+        }
+        .status-bar .value {
+            font-family: 'Georgia', monospace;
+            font-weight: 500;
+            color: #0f172a;
+        }
+
+        .shortcut-hint {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .shortcut-hint kbd {
+            background: #f1f5f9;
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-family: 'Georgia', monospace;
+            font-size: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .image-frame-small {
+            height: 380px;
+            min-height: 300px;
+            max-height: 55vh;
+        }
+
+        #image-frame {
+            height: 380px;
+            min-height: 300px;
+            max-height: 55vh;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 10;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #006c49;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* ===== SIDEBAR KIRI - FITUR PEMROSESAN ===== */
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1e293b;
+            font-weight: 500;
+            font-size: 16px;
+            border: 1px solid transparent;
+            font-family: 'Georgia', serif;
+        }
+        .menu-item:hover {
+            background: rgba(0, 108, 73, 0.08);
+            border-color: rgba(0, 108, 73, 0.15);
+        }
+        .menu-item.active {
+            background: rgba(0, 108, 73, 0.12);
+            border-color: #006c49;
+            color: #006c49;
+        }
+        .menu-item .icon {
+            font-size: 22px;
+            width: 30px;
+            text-align: center;
+        }
+        .menu-item .badge {
+            margin-left: auto;
+            font-size: 11px;
+            background: #e2e8f0;
+            padding: 2px 10px;
+            border-radius: 12px;
+            color: #64748b;
+            font-weight: 400;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .feature-slider {
+            margin-top: 6px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            display: none;
+        }
+        .feature-slider.active {
+            display: block;
+        }
+        .feature-slider .slider-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            font-family: 'Georgia', serif;
+        }
+        .feature-slider .slider-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #006c49;
+            font-family: 'Georgia', serif;
+        }
+        .feature-slider button {
+            font-size: 14px !important;
+            padding: 6px 0 !important;
+        }
+
+        /* ===== SIDEBAR KANAN - INFO & KONTROL ===== */
+        .right-panel-item {
+            background: white;
+            border-radius: 10px;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .right-panel-item:hover {
+            border-color: #006c49;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .right-panel-item .label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-family: 'Georgia', serif;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .right-panel-item .value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #0f172a;
+            font-family: 'Georgia', serif;
+        }
+
+        /* Info items di sidebar kanan */
+        .right-panel-item .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+        }
+        .right-panel-item .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .right-panel-item .info-item .info-icon {
+            font-size: 13px;
+            color: #1a1a1a;
+            margin-right: 4px;
+        }
+        .right-panel-item .info-item .info-label-text {
+            font-size: 11px;
+            font-weight: 500;
+            color: #1a1a1a;
+            font-family: 'Georgia', serif;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .right-panel-item .info-item .info-value-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            font-family: 'Georgia', serif;
+            margin-top: 1px;
+        }
+
+        /* Button toolbar */
+        .btn-toolbar {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(187, 202, 191, 0.3);
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 15px;
+            font-family: 'Georgia', serif;
+        }
+        .btn-toolbar:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: scale(1.02);
+        }
+        .btn-toolbar:active {
+            transform: scale(0.95);
+        }
+
+        /* ===== HISTOGRAM MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                transform: scale(0.9) translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h2 {
+            font-family: 'Georgia', serif;
+            font-weight: 700;
+            font-size: 24px;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        .modal-content .subtitle {
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            color: #94a3b8;
+            margin-bottom: 16px;
+        }
+        .modal-content .axis-label {
+            font-family: 'Georgia', serif;
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .modal-content .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .modal-content .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            color: #334155;
+        }
+        .modal-content .legend-item .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        body,
+        * {
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+        }
+
+        /* Ukuran font yang lebih besar dan konsisten */
+        .text-sm {
+            font-size: 0.95rem !important;
+        }
+        .text-xs {
+            font-size: 0.85rem !important;
+        }
+        .text-base {
+            font-size: 1.05rem !important;
+        }
+        .text-lg {
+            font-size: 1.2rem !important;
+        }
+        .text-xl {
+            font-size: 1.3rem !important;
+        }
+        .text-2xl {
+            font-size: 1.6rem !important;
+        }
+
+        .font-headline-md {
+            font-size: 1.3rem !important;
+        }
+        .font-headline-sm {
+            font-size: 1.15rem !important;
+        }
+        .font-label-md {
+            font-size: 0.95rem !important;
+        }
+        .font-label-sm {
+            font-size: 0.85rem !important;
+        }
+
+        /* Edge Detection buttons */
+        .feature-slider .edge-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .feature-slider .edge-buttons button {
+            font-size: 13px !important;
+            padding: 6px 0 !important;
+            flex: 1;
+            min-width: 60px;
+            font-weight: 700;
+            border: none;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+        .feature-slider .edge-buttons button:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+        .feature-slider .edge-buttons button:active {
+            transform: scale(0.95);
+        }
+        .feature-slider .edge-buttons .btn-sobel {
+            background: #3b82f6;
+        }
+        .feature-slider .edge-buttons .btn-prewitt {
+            background: #14b8a6;
+        }
+        .feature-slider .edge-buttons .btn-canny {
+            background: #ef4444;
+        }
+
+        /* Fix untuk text di sidebar kanan - PASTI TIDAK MENUMPUK */
+        .right-panel-item .info-grid .info-item {
+            min-width: 0;
+            overflow: hidden;
+        }
+        .right-panel-item .info-grid .info-item .info-value-text {
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        .right-panel-item .info-grid .info-item .info-label-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body class="text-on-background font-body-md min-h-screen flex flex-col overflow-hidden dashboard-bg">
+    <!-- TopNavBar -->
+    <header class="bg-surface-container-lowest/80 backdrop-blur-md text-primary flex justify-between items-center px-gutter w-full h-16 border-b border-outline-variant fixed top-0 z-50">
+        <div class="flex items-center gap-md">
+            <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight" style="font-family:'Georgia',serif; font-size:1.5rem;">CitraLite</span>
+            <nav class="hidden md:flex gap-lg ml-xl">
+                <a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md transition-colors" href="#" style="font-family:'Georgia',serif; font-size:1.05rem;">Editor</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-md">
+            <span class="text-sm text-on-surface-variant hidden md:block" id="fileInfo" style="font-family:'Georgia',serif; font-size:0.95rem;">Belum ada gambar</span>
+            <button class="btn-toolbar hidden md:flex" onclick="resetImage()" title="Undo">
+                <span class="material-symbols-outlined" style="font-size:20px;">undo</span>
+            </button>
+            <button class="btn-toolbar hidden md:flex" onclick="resetAll()" title="Reset All">
+                <span class="material-symbols-outlined" style="font-size:20px;">restart_alt</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 pt-16 h-screen overflow-hidden">
+        <!-- ===== SIDEBAR KIRI - FITUR PEMROSESAN ===== -->
+        <aside class="bg-surface-container-lowest/70 backdrop-blur-xl text-primary border-r border-outline-variant flex flex-col gap-sm p-md h-full w-[280px] fixed left-0 hidden md:flex z-40">
+            <div class="flex items-center gap-md mb-2 px-xs">
+                <div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container">
+                    <span class="material-symbols-outlined">image</span>
+                </div>
+                <div>
+                    <h2 class="font-headline-sm text-headline-sm text-primary leading-tight" style="font-family:'Georgia',serif; font-size:1.25rem;">Image Processor</h2>
+                    <p class="text-on-surface-variant font-label-sm text-label-sm" id="projectInfo" style="font-family:'Georgia',serif; font-size:0.95rem;">v1.0 • Belum ada gambar</p>
+                </div>
+            </div>
+
+            <button class="w-full bg-primary text-on-primary flex items-center justify-center gap-sm py-md rounded-xl font-bold cursor-pointer active:scale-95 transition-all mb-2 shadow-sm" onclick="document.getElementById('fileInput').click()" style="font-family:'Georgia',serif; font-size:1.05rem;">
+                <span class="material-symbols-outlined">add_photo_alternate</span>
+                Upload Gambar
+            </button>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(this.files[0])">
+
+            <!-- Menu Fitur -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                <p class="text-[12px] font-bold uppercase text-slate-400 tracking-wider mb-2 mt-1" style="font-family:'Georgia',serif;">Pengolahan Citra</p>
+
+                <!-- 1. Grayscale -->
+                <div class="menu-item" onclick="toggleFeature('grayscale')" id="menu-grayscale">
+                    <span class="icon material-symbols-outlined">contrast</span>
+                    <span>Grayscale</span>
+                    <span class="badge">Intensity</span>
+                </div>
+                <div class="feature-slider" id="slider-grayscale">
+                    <div class="flex items-center justify-between">
+                        <span class="slider-label">Intensitas</span>
+                        <span class="slider-value" id="grayscaleVal">100%</span>
+                    </div>
+                    <input type="range" id="grayscaleSlider" min="0" max="100" value="100" class="w-full mt-1" oninput="document.getElementById('grayscaleVal').textContent=this.value+'%'">
+                    <button onclick="applyGrayscale()" class="w-full mt-2 bg-primary text-white font-bold py-2 rounded-full hover:bg-primary/80 transition">Terapkan</button>
+                </div>
+
+                <!-- 2. Biner -->
+                <div class="menu-item" onclick="toggleFeature('binary')" id="menu-binary">
+                    <span class="icon material-symbols-outlined">check_box_outline_blank</span>
+                    <span>Citra Biner</span>
+                    <span class="badge">Threshold</span>
+                </div>
+                <div class="feature-slider" id="slider-binary">
+                    <div class="flex items-center justify-between">
+                        <span class="slider-label">Threshold</span>
+                        <span class="slider-value" id="binaryVal">127</span>
+                    </div>
+                    <input type="range" id="binarySlider" min="0" max="255" value="127" class="w-full mt-1" oninput="document.getElementById('binaryVal').textContent=this.value">
+                    <button onclick="applyBinary()" class="w-full mt-2 bg-slate-600 text-white font-bold py-2 rounded-full hover:bg-slate-700 transition">Terapkan</button>
+                </div>
+
+                <!-- 3. Negatif -->
+                <div class="menu-item" onclick="toggleFeature('negative')" id="menu-negative">
+                    <span class="icon material-symbols-outlined">invert_colors</span>
+                    <span>Citra Negatif</span>
+                    <span class="badge">Intensity</span>
+                </div>
+                <div class="feature-slider" id="slider-negative">
+                    <div class="flex items-center justify-between">
+                        <span class="slider-label">Intensitas</span>
+                        <span class="slider-value" id="negativeVal">100%</span>
+                    </div>
+                    <input type="range" id="negativeSlider" min="0" max="100" value="100" class="w-full mt-1" oninput="document.getElementById('negativeVal').textContent=this.value+'%'">
+                    <button onclick="applyNegative()" class="w-full mt-2 bg-purple-500 text-white font-bold py-2 rounded-full hover:bg-purple-600 transition">Terapkan</button>
+                </div>
+
+                <!-- 4. Brightness -->
+                <div class="menu-item" onclick="toggleFeature('brightness')" id="menu-brightness">
+                    <span class="icon material-symbols-outlined">wb_sunny</span>
+                    <span>Brightening</span>
+                    <span class="badge">Adjust</span>
+                </div>
+                <div class="feature-slider" id="slider-brightness">
+                    <div class="flex items-center justify-between">
+                        <span class="slider-label">Brightness</span>
+                        <span class="slider-value" id="brightnessVal">0</span>
+                    </div>
+                    <input type="range" id="brightnessSlider" min="-255" max="255" value="0" class="w-full mt-1" oninput="document.getElementById('brightnessVal').textContent=this.value">
+                    <button onclick="applyBrightness()" class="w-full mt-2 bg-orange-500 text-white font-bold py-2 rounded-full hover:bg-orange-600 transition">Terapkan</button>
+                </div>
+
+                <!-- 5. Histogram -->
+                <div class="menu-item" onclick="showHistogramModal()" id="menu-histogram">
+                    <span class="icon material-symbols-outlined">bar_chart</span>
+                    <span>Histogram</span>
+                    <span class="badge">View</span>
+                </div>
+
+                <!-- 6. Fourier -->
+               <!-- 6. Fourier -->
+                <div class="menu-item" onclick="applyFourier()" id="menu-fourier">
+                    <span class="icon material-symbols-outlined">graphic_eq</span>
+                    <span>Fourier</span>
+                    <span class="badge">Transform</span>
+                </div>
+
+                <!-- 7. Edge Detection -->
+                <div class="menu-item" onclick="toggleFeature('edge')" id="menu-edge">
+                    <span class="icon material-symbols-outlined">border_all</span>
+                    <span>Edge Detection</span>
+                    <span class="badge">Sobel/Prewitt/Canny</span>
+                </div>
+                <div class="feature-slider" id="slider-edge">
+                <div class="edge-buttons">
+                    <button onclick="applyEdge('sobel')" class="btn-sobel">Sobel</button>
+                    <button onclick="applyEdge('prewitt')" class="btn-prewitt">Prewitt</button>
+                    <button onclick="applyEdge('canny')" class="btn-canny">Canny</button>
+                </div>
+                <div id="cannyThresholds" style="display:none;">
+                    <div class="flex items-center justify-between">
+                        <span class="slider-label">Threshold 1</span>
+                        <span class="slider-value" id="edgeVal1">100</span>
+                    </div>
+                    <input type="range" id="edgeSlider1" min="0" max="255" value="100" class="w-full mt-0.5" oninput="document.getElementById('edgeVal1').textContent=this.value">
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="slider-label">Threshold 2</span>
+                        <span class="slider-value" id="edgeVal2">200</span>
+                    </div>
+                    <input type="range" id="edgeSlider2" min="0" max="255" value="200" class="w-full mt-0.5" oninput="document.getElementById('edgeVal2').textContent=this.value">
+                </div>
+            </div>
+            </div>
+
+            <!-- Reset All di bawah -->
+            <div class="mt-auto pt-2 border-t border-outline-variant">
+                <button class="btn-reset-all" onclick="resetAll()" style="font-family:'Georgia',serif; font-size:1rem;">
+                    <span class="material-symbols-outlined" style="font-size:20px;">restart_alt</span>
+                    Reset All
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 ml-0 md:ml-[280px] mr-0 lg:mr-[320px] bg-transparent relative canvas-bg overflow-hidden flex flex-col">
+            <!-- Toolbar Overlay -->
+            <div class="absolute top-gutter left-gutter right-gutter flex justify-between pointer-events-none z-10">
+                <div class="flex gap-sm pointer-events-auto">
+                    <button class="p-md bg-surface-container-lowest/70 backdrop-blur-md border border-outline-variant rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 text-primary" onclick="resetImage()">
+                        <span class="material-symbols-outlined">undo</span>
+                    </button>
+                </div>
+                <div class="flex gap-sm pointer-events-auto">
+                    <div class="px-lg flex items-center gap-sm bg-surface-container-lowest/70 backdrop-blur-md border border-outline-variant rounded-xl shadow-sm text-primary">
+                        <span class="material-symbols-outlined text-label-sm">zoom_in</span>
+                        <span class="font-label-md text-label-md font-bold" id="zoom-label" style="font-family:'Georgia',serif; font-size:1.05rem;">100%</span>
+                    </div>
+                    <div class="px-lg flex items-center gap-sm bg-surface-container-lowest/70 backdrop-blur-md border border-outline-variant rounded-xl shadow-sm text-primary">
+                        <span class="material-symbols-outlined text-label-sm">rotate_right</span>
+                        <span class="font-label-md text-label-md font-bold" id="rotation-label" style="font-family:'Georgia',serif; font-size:1.05rem;">0°</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Canvas -->
+            <div class="flex-1 flex items-center justify-center p-4 overflow-auto custom-scrollbar">
+                <div class="relative bg-white shadow-2xl border border-outline-variant rounded-lg w-full max-w-3xl image-frame-small" id="image-frame">
+                    <div class="loading-overlay" id="loadingOverlay">
+                        <div class="spinner"></div>
+                    </div>
+
+                    <div id="canvas-container">
+                        <img id="target-img" style="display:none; max-width:100%; max-height:100%; object-fit:contain; pointer-events:none; user-select:none;" alt="Citra" draggable="false"/>
+                        <div id="modeIndicator" class="mode-indicator">🖐️ Geser</div>
+                    </div>
+
+                    <div id="placeholderText" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none">
+                        <span class="material-symbols-outlined text-5xl">image</span>
+                        <p class="mt-2 text-sm font-medium" style="font-family:'Georgia',serif; font-size:1.05rem;">Upload gambar untuk mulai</p>
+                        <p class="text-xs text-gray-400" style="font-family:'Georgia',serif; font-size:0.9rem;">Scroll = Zoom • Drag tengah = Geser • Drag pinggir = Rotasi</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span><span class="label">Rotasi:</span> <span id="rotation-display" class="value">0°</span></span>
+                <span><span class="label">Zoom:</span> <span id="scale-display" class="value">100%</span></span>
+                <span><span class="label">Flip:</span> <span id="flip-display" class="value">Normal</span></span>
+                <span><span class="label">Mode:</span> <span id="mode-display" class="value">Geser</span></span>
+                <span><span class="label">Trans X:</span> <span id="transX-display" class="value">0</span></span>
+                <span><span class="label">Trans Y:</span> <span id="transY-display" class="value">0</span></span>
+                <span class="shortcut-hint ml-auto">
+                    <kbd>R</kbd> Reset <kbd>H</kbd> Flip H <kbd>V</kbd> Flip V <kbd>←→</kbd> Rotasi
+                </span>
+            </div>
+
+            <!-- Mobile Action Bar -->
+            <div class="lg:hidden bg-surface-container-lowest/80 backdrop-blur-md border-t border-outline-variant p-gutter flex justify-around items-center">
+                <button class="flex flex-col items-center gap-xs text-primary" onclick="document.getElementById('fileInput').click()" style="font-family:'Georgia',serif; font-size:0.95rem;">
+                    <span class="material-symbols-outlined">add_photo_alternate</span>
+                    <span class="text-label-sm font-label-sm">Upload</span>
+                </button>
+                <button class="flex flex-col items-center gap-xs text-red-500" onclick="resetAll()" style="font-family:'Georgia',serif; font-size:0.95rem;">
+                    <span class="material-symbols-outlined">restart_alt</span>
+                    <span class="text-label-sm font-label-sm">Reset All</span>
+                </button>
+                <button class="flex flex-col items-center gap-xs text-on-surface-variant" onclick="resetImage()" style="font-family:'Georgia',serif; font-size:0.95rem;">
+                    <span class="material-symbols-outlined">undo</span>
+                    <span class="text-label-sm font-label-sm">Reset</span>
+                </button>
+                <button class="flex flex-col items-center gap-xs text-on-surface-variant" onclick="flipImage('horizontal')" style="font-family:'Georgia',serif; font-size:0.95rem;">
+                    <span class="material-symbols-outlined">flip</span>
+                    <span class="text-label-sm font-label-sm">Flip</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- ===== SIDEBAR KANAN - INFO & KONTROL ===== -->
+        <aside class="fixed right-0 top-16 h-[calc(100vh-64px)] w-[320px] bg-surface-container-lowest/70 backdrop-blur-xl border-l border-outline-variant flex flex-col hidden lg:flex z-40">
+            <div class="p-gutter border-b border-outline-variant flex justify-between items-center bg-surface-container-low/30">
+                <h3 class="font-headline-sm text-headline-sm text-primary" style="font-family:'Georgia',serif; font-size:1.25rem;">Image Manager</h3>
+            </div>
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+
+                <!-- ===== INFO CITRA ===== -->
+                <div class="right-panel-item">
+                    <span class="label"> 🛈 Info Citra</span>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label-text">Ukuran</span>
+                            <span class="info-value-text" id="infoUkuran">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label-text">Resolusi</span>
+                            <span class="info-value-text" id="infoResolusi">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label-text">Channel</span>
+                            <span class="info-value-text" id="infoChannel">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label-text">Piksel</span>
+                            <span class="info-value-text" id="infoPiksel">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== ZOOM ===== -->
+                <div class="right-panel-item">
+                    <div class="flex items-center justify-between">
+                        <span class="label">🔍 Zoom</span>
+                        <span class="value" id="zoomValueRight">100%</span>
+                    </div>
+                    <input type="range" min="20" max="600" value="100" class="w-full mt-1" id="zoomSliderRight" oninput="updateZoomFromSlider(this.value)">
+                    <div class="flex justify-between text-xs text-slate-500 mt-0.5"><span>20%</span><span>600%</span></div>
+                </div>
+
+                <!-- ===== ROTASI ===== -->
+                <div class="right-panel-item">
+                    <div class="flex items-center justify-between">
+                        <span class="label">🔄 Rotasi</span>
+                        <span class="value" id="rotationValueRight">0°</span>
+                    </div>
+                    <input type="range" min="0" max="360" value="0" class="w-full mt-1" id="rotationSliderRight" oninput="updateRotationFromSlider(this.value)">
+                    <div class="flex justify-between text-xs text-slate-500 mt-0.5"><span>0°</span><span>360°</span></div>
+                    <p class="text-xs text-slate-500 mt-1"> 🛈  Drag pinggir gambar untuk rotasi manual</p>
+                </div>
+
+                <!-- ===== FLIP ===== -->
+                <div class="right-panel-item">
+                    <span class="label">↔️ Flip</span>
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <button class="py-2 border border-slate-300 rounded-lg text-sm font-semibold hover:bg-slate-50 transition active:scale-95 text-slate-700" onclick="flipImage('horizontal')" style="font-family:'Georgia',serif; font-size:0.95rem;">
+                            <span class="material-symbols-outlined text-sm align-middle">flip_to_front</span> Flip H
+                        </button>
+                        <button class="py-2 border border-slate-300 rounded-lg text-sm font-semibold hover:bg-slate-50 transition active:scale-95 text-slate-700" onclick="flipImage('vertical')" style="font-family:'Georgia',serif; font-size:0.95rem;">
+                            <span class="material-symbols-outlined text-sm align-middle">flip_to_back</span> Flip V
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ===== TRANSLASI ===== -->
+                <div class="right-panel-item">
+                    <span class="label">📍 Translasi</span>
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <div>
+                            <span class="text-xs font-medium text-slate-700">X</span>
+                            <span class="font-semibold text-slate-800 block text-sm" id="transX-right">0</span>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-slate-700">Y</span>
+                            <span class="font-semibold text-slate-800 block text-sm" id="transY-right">0</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1"> 🛈 Drag tengah gambar untuk geser</p>
+                </div>
+
+                <!-- ===== RESET ===== -->
+                <div class="right-panel-item">
+                    <button class="w-full bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2.5 rounded-lg transition active:scale-95" onclick="resetAll()" style="font-family:'Georgia',serif; font-size:1rem;">
+                        <span class="material-symbols-outlined text-sm align-middle">restart_alt</span> Reset All
+                    </button>
+                </div>
+
+            </div>
+        </aside>
+    </div>
+
+    <!-- ===== HISTOGRAM MODAL ===== -->
+    <div class="modal-overlay" id="histogramModal">
+        <div class="modal-content">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2>Histogram Citra</h2>
+                    <p class="subtitle">Distribusi nilai piksel pada citra</p>
+                </div>
+                <button onclick="closeHistogramModal()" class="text-slate-400 hover:text-slate-600 text-3xl leading-none" style="font-family:'Georgia',serif;">×</button>
+            </div>
+            <div style="position:relative; height:300px;">
+                <canvas id="histogramChart"></canvas>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400 mt-2">
+                <span class="axis-label">← Nilai Piksel (0-255) →</span>
+                <span class="axis-label">Frekuensi ↑</span>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><span class="dot" style="background:#3b82f6;"></span> Blue</div>
+                <div class="legend-item"><span class="dot" style="background:#22c55e;"></span> Green</div>
+                <div class="legend-item"><span class="dot" style="background:#ef4444;"></span> Red</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        var currentFilename = null;
+        var currentBrightness = 0;
+        var isGrayscale = false;
+        var isBinary = false;
+        var thresholdValue = 127;
+        var histogramChartInstance = null;
+        // ===== VARIABLES UNTUK INTERAKSI GAMBAR =====
+        var container = document.getElementById('canvas-container');
+        var img = document.getElementById('target-img');
+        var modeIndicator = document.getElementById('modeIndicator');
+        var modeDisplay = document.getElementById('mode-display');
+
+        var scale = 1;
+        var pointX = 0;
+        var pointY = 0;
+        var rotation = 0;
+        var flipX = 1;
+        var flipY = 1;
+
+        var isDragging = false;
+        var isRotating = false;
+        var startX = 0;
+        var startY = 0;
+        var touchStartDist = 0;
+        var touchStartAngle = 0;
+        var lastAngle = 0;
+        var currentMode = 'translate';
+        var swipeHistory = [];
+        // ===== DOM REFS =====
+        var canvasImage = document.getElementById('target-img');
+        var placeholderText = document.getElementById('placeholderText');
+        var loadingOverlay = document.getElementById('loadingOverlay');
+        var imageFrame = document.getElementById('image-frame');
+        // ===== TOAST =====
+        function showToast(message, type) {
+            type = type || 'success';
+            var existingToast = document.querySelector('.toast');
+            if (existingToast) existingToast.remove();
+
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(100px)';
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3000);
+        }
+        // ===== LOADING =====
+        function showLoading(show) {
+            if (show) {
+                loadingOverlay.classList.add('active');
+            } else {
+                loadingOverlay.classList.remove('active');
+            }
+        }
+        // ===== SET MODE =====
+        function setMode(mode) {
+            currentMode = mode;
+            if (mode === 'translate') {
+                modeIndicator.textContent = '🖐️ Geser';
+                modeIndicator.className = 'mode-indicator show';
+                if (modeDisplay) modeDisplay.textContent = 'Geser';
+                container.style.cursor = 'grab';
+            } else {
+                modeIndicator.textContent = '🔄 Rotasi';
+                modeIndicator.className = 'mode-indicator show';
+                if (modeDisplay) modeDisplay.textContent = 'Rotasi';
+                container.style.cursor = 'grabbing';
+            }
+
+            clearTimeout(modeIndicator._timeout);
+            modeIndicator._timeout = setTimeout(function() {
+                modeIndicator.className = 'mode-indicator';
+            }, 1000);
+        }
+        // ===== TOGGLE FEATURE =====
+        var activeFeature = null;
+
+        function toggleFeature(feature) {
+            document.querySelectorAll('.feature-slider').forEach(function(el) {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.menu-item').forEach(function(el) {
+                el.classList.remove('active');
+            });
+
+            var slider = document.getElementById('slider-' + feature);
+            if (slider) slider.classList.add('active');
+
+            var menu = document.getElementById('menu-' + feature);
+            if (menu) menu.classList.add('active');
+
+            activeFeature = feature;
+        }
+        // ===== UPDATE TRANSFORM =====
+        function updateTransform() {
+            if (!img) return;
+            img.style.transform = 'translate(' + pointX + 'px, ' + pointY + 'px) scale(' + (scale * flipX) + ', ' + (scale *
+                flipY) + ') rotate(' + rotation + 'deg)';
+            updateInfoDisplay();
+        }
+
+        function updateInfoDisplay() {
+            var rotDisplay = document.getElementById('rotation-display');
+            var scaleDisplay = document.getElementById('scale-display');
+            var flipDisplay = document.getElementById('flip-display');
+            var zoomLabel = document.getElementById('zoom-label');
+            var zoomValue = document.getElementById('zoomValueRight');
+            var rotationLabel = document.getElementById('rotation-label');
+            var rotationValue = document.getElementById('rotationValueRight');
+            var zoomSlider = document.getElementById('zoomSliderRight');
+            var rotationSlider = document.getElementById('rotationSliderRight');
+            var transXDisplay = document.getElementById('transX-display');
+            var transYDisplay = document.getElementById('transY-display');
+            var transXRight = document.getElementById('transX-right');
+            var transYRight = document.getElementById('transY-right');
+
+            if (rotDisplay) {
+                var rot = Math.round(rotation % 360);
+                if (rot < 0) rot += 360;
+                rotDisplay.textContent = rot + '°';
+            }
+            if (scaleDisplay) {
+                scaleDisplay.textContent = Math.round(scale * 100) + '%';
+            }
+            if (zoomLabel) zoomLabel.textContent = Math.round(scale * 100) + '%';
+            if (zoomValue) zoomValue.textContent = Math.round(scale * 100) + '%';
+            if (zoomSlider) zoomSlider.value = scale * 100;
+            if (rotationLabel) rotationLabel.textContent = Math.round(rotation % 360) + '°';
+            if (rotationValue) rotationValue.textContent = Math.round(rotation % 360) + '°';
+            if (rotationSlider) rotationSlider.value = rotation % 360;
+
+            if (transXDisplay) transXDisplay.textContent = Math.round(pointX);
+            if (transYDisplay) transYDisplay.textContent = Math.round(pointY);
+            if (transXRight) transXRight.textContent = Math.round(pointX);
+            if (transYRight) transYRight.textContent = Math.round(pointY);
+
+            if (flipDisplay) {
+                if (flipX === -1 && flipY === -1) flipDisplay.textContent = 'H & V';
+                else if (flipX === -1) flipDisplay.textContent = 'Horizontal';
+                else if (flipY === -1) flipDisplay.textContent = 'Vertikal';
+                else flipDisplay.textContent = 'Normal';
+            }
+        }
+
+        function animateFlip() {
+            if (!img) return;
+            img.classList.remove('flip-animation');
+            void img.offsetWidth;
+            img.classList.add('flip-animation');
+        }
+        // ===== UPLOAD =====
+        function handleFileUpload(file) {
+            if (!file) {
+                showToast('Pilih file gambar!', 'error');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            showLoading(true);
+
+            fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    showLoading(false);
+                    if (data.success) {
+                        currentFilename = data.filename;
+                        canvasImage.src = data.image_data;
+                        canvasImage.style.display = 'block';
+                        placeholderText.style.display = 'none';
+
+                        scale = 1;
+                        pointX = 0;
+                        pointY = 0;
+                        rotation = 0;
+                        flipX = 1;
+                        flipY = 1;
+                        updateTransform();
+
+                        document.getElementById('fileInfo').textContent = data.filename;
+                        document.getElementById('projectInfo').textContent = 'v1.0 • ' + (data.info ? data.info.ukuran ||
+                            '' : '');
+
+                        if (data.info) {
+                            document.getElementById('infoUkuran').textContent = data.info.ukuran || '-';
+                            document.getElementById('infoResolusi').textContent = data.info.dimensi || '-';
+                            document.getElementById('infoChannel').textContent = data.info.channels || '-';
+                            document.getElementById('infoPiksel').textContent = data.info.piksel || '-';
+                        }
+
+                        setMode('translate');
+                        showToast('✅ Gambar berhasil diupload!', 'success');
+                    } else {
+                        showToast('❌ ' + data.error, 'error');
+                    }
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    showToast('❌ Error: ' + error.message, 'error');
+                });
+        }
+        // ===== FLIP =====
+        function flipImage(direction) {
+            if (!currentFilename) {
+                showToast('Upload gambar dulu!', 'error');
+                return;
+            }
+
+            if (direction === 'horizontal') {
+                flipX = flipX === 1 ? -1 : 1;
+            } else if (direction === 'vertical') {
+                flipY = flipY === 1 ? -1 : 1;
+            }
+            animateFlip();
+            updateTransform();
+            if (navigator.vibrate) navigator.vibrate(30);
+
+            applyOperation('/apply/flip', { direction: direction === 'horizontal' ? 'h' : 'v' });
+        }
+        // ===== RESET =====
+        function resetTransform() {
+            scale = 1;
+            pointX = 0;
+            pointY = 0;
+            rotation = 0;
+            flipX = 1;
+            flipY = 1;
+            animateFlip();
+            updateTransform();
+            if (navigator.vibrate) navigator.vibrate(20);
+            setMode('translate');
+        }
+
+        function resetImage() {
+            if (!currentFilename) {
+                showToast('Tidak ada gambar', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            fetch('/reset_image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentFilename })
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    showLoading(false);
+                    if (data.success) {
+                        canvasImage.src = data.image_data;
+                        resetTransform();
+                        showToast('✅ Reset ke citra asli berhasil', 'success');
+                    } else {
+                        showToast('❌ ' + data.error, 'error');
+                    }
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    showToast('❌ Error: ' + error.message, 'error');
+                });
+        }
+
+        function resetAll() {
+            if (!currentFilename) {
+                showToast('Tidak ada gambar', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            fetch('/reset_image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentFilename })
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    showLoading(false);
+                    if (data.success) {
+                        canvasImage.src = data.image_data;
+                        resetTransform();
+                        showToast('✅ Semua perubahan direset!', 'info');
+                    } else {
+                        showToast('❌ ' + data.error, 'error');
+                    }
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    showToast('❌ Error: ' + error.message, 'error');
+                });
+        }
+        // ===== OPERATIONS =====
+        function applyOperation(endpoint, params) {
+            if (!currentFilename) {
+                showToast('Upload gambar terlebih dahulu!', 'error');
+                return;
+            }
+
+            var data = { filename: currentFilename };
+            for (var key in params) {
+                if (params.hasOwnProperty(key)) {
+                    data[key] = params[key];
+                }
+            }
+            showLoading(true);
+
+            fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    showLoading(false);
+                    if (data.success) {
+                        canvasImage.src = data.image_data;
+                        updateTransform();
+                        showToast('✅ ' + data.message, 'success');
+                    } else {
+                        showToast('❌ ' + data.error, 'error');
+                    }
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    showToast('❌ Error: ' + error.message, 'error');
+                });
+        }
+        // ===== FITUR SIDEBAR KIRI =====
+        function applyGrayscale() {
+            var intensity = parseInt(document.getElementById('grayscaleSlider').value);
+            applyOperation('/convert/grayscale', { intensity: intensity });
+        }
+
+        function applyBinary() {
+            var threshold = parseInt(document.getElementById('binarySlider').value);
+            applyOperation('/convert/binary', { threshold: threshold });
+        }
+
+        function applyNegative() {
+            var intensity = parseInt(document.getElementById('negativeSlider').value);
+            applyOperation('/convert/negative', { intensity: intensity });
+        }
+
+        function applyBrightness() {
+            var value = parseInt(document.getElementById('brightnessSlider').value);
+            applyOperation('/apply/brightness', { value: value });
+        }
+
+        function applyFourier() {
+            applyOperation('/convert/fourier', {});
+        }
+
+        function applyEdge(method) {
+            var t1 = parseInt(document.getElementById('edgeSlider1').value);
+            var t2 = parseInt(document.getElementById('edgeSlider2').value);
+
+            // Tandai tombol yang dipilih sebagai aktif
+            document.querySelectorAll('.edge-buttons button').forEach(function(btn) {
+                btn.style.outline = 'none';
+            });
+            var activeBtn = document.querySelector('.btn-' + method);
+            if (activeBtn) activeBtn.style.outline = '3px solid #facc15';
+
+            // Tampilkan slider threshold hanya untuk Canny
+            var cannyThresholds = document.getElementById('cannyThresholds');
+            if (cannyThresholds) {
+                cannyThresholds.style.display = (method === 'canny') ? 'block' : 'none';
+            }
+
+            applyOperation('/convert/edge', {
+                method: method,
+                threshold1: t1,
+                threshold2: t2
+            });
+        }
+        // ===== HISTOGRAM =====
+        function showHistogramModal() {
+            if (!currentFilename) {
+                showToast('Upload gambar dulu!', 'error');
+                return;
+            }
+
+            document.getElementById('histogramModal').classList.add('active');
+            showLoading(true);
+
+            fetch('/get_histogram', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentFilename })
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    showLoading(false);
+                    if (data.success && data.histogram) {
+                        renderHistogram(data.histogram);
+                    } else {
+                        showToast('❌ Gagal mengambil histogram: ' + (data.error || 'Unknown error'), 'error');
+                        closeHistogramModal();
+                    }
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    showToast('❌ Error: ' + error.message, 'error');
+                    closeHistogramModal();
+                });
+        }
+
+        function closeHistogramModal() {
+            document.getElementById('histogramModal').classList.remove('active');
+            if (histogramChartInstance) {
+                histogramChartInstance.destroy();
+                histogramChartInstance = null;
+            }
+        }
+
+        function renderHistogram(histData) {
+            var canvas = document.getElementById('histogramChart');
+            if (!canvas) return;
+
+            var ctx = canvas.getContext('2d');
+
+            if (histogramChartInstance) {
+                histogramChartInstance.destroy();
+                histogramChartInstance = null;
+            }
+
+            var labels = [];
+            for (var i = 0; i < 256; i++) {
+                labels.push(i);
+            }
+
+            if (!histData || !Array.isArray(histData) || histData.length < 3) {
+                showToast('❌ Data histogram tidak valid', 'error');
+                return;
+            }
+
+            var blueData = histData[0] || [];
+            var greenData = histData[1] || [];
+            var redData = histData[2] || [];
+
+            if (blueData.length < 256 || greenData.length < 256 || redData.length < 256) {
+                showToast('❌ Data histogram tidak lengkap', 'error');
+                return;
+            }
+
+            try {
+                histogramChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Blue',
+                            data: blueData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            fill: true,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            tension: 0.2
+                        }, {
+                            label: 'Green',
+                            data: greenData,
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                            fill: true,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            tension: 0.2
+                        }, {
+                            label: 'Red',
+                            data: redData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                            fill: true,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: false
+                            },
+                            y: {
+                                display: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Chart error:', e);
+                showToast('❌ Error membuat grafik histogram', 'error');
+            }
+        }
+        // ===== SLIDER CONTROLS =====
+        function updateZoomFromSlider(val) {
+            scale = parseInt(val) / 100;
+            updateTransform();
+            if (currentFilename) {
+                applyOperation('/apply/zoom', { value: parseInt(val) });
+            }
+        }
+
+        function updateRotationFromSlider(val) {
+            rotation = parseInt(val);
+            updateTransform();
+            if (currentFilename) {
+                applyOperation('/apply/rotate', { value: rotation });
+            }
+        }
+        // ===== MOUSE EVENTS =====
+        container.addEventListener('mousedown', function(e) {
+            if (!currentFilename) return;
+            e.preventDefault();
+            isDragging = true;
+
+            var rect = container.getBoundingClientRect();
+            var centerX = rect.left + rect.width / 2;
+            var centerY = rect.top + rect.height / 2;
+
+            var dx = e.clientX - centerX;
+            var dy = e.clientY - centerY;
+            var distance = Math.sqrt(dx * dx + dy * dy);
+
+            var threshold = Math.min(rect.width, rect.height) * 0.35;
+
+            if (distance < threshold) {
+                isRotating = false;
+                startX = e.clientX - pointX;
+                startY = e.clientY - pointY;
+                setMode('translate');
+            } else {
+                isRotating = true;
+                lastAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+                setMode('rotate');
+            }
+        });
+
+        window.addEventListener('mouseup', function() { isDragging = false;
+            isRotating = false; });
+
+        container.addEventListener('mousemove', function(e) {
+            if (!isDragging || !currentFilename) return;
+
+            var rect = container.getBoundingClientRect();
+            var centerX = rect.left + rect.width / 2;
+            var centerY = rect.top + rect.height / 2;
+
+            if (isRotating) {
+                var currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+                var angleDiff = currentAngle - lastAngle;
+                if (angleDiff > 180) angleDiff -= 360;
+                if (angleDiff < -180) angleDiff += 360;
+                rotation += angleDiff;
+                lastAngle = currentAngle;
+                updateTransform();
+            } else {
+                pointX = e.clientX - startX;
+                pointY = e.clientY - startY;
+                updateTransform();
+            }
+        });
+
+        container.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            resetAll();
+        });
+        // ===== TOUCH EVENTS =====
+        container.addEventListener('touchstart', function(e) {
+            if (!currentFilename) return;
+            if (e.touches.length === 1) {
+                isDragging = true;
+
+                var rect = container.getBoundingClientRect();
+                var centerX = rect.left + rect.width / 2;
+                var centerY = rect.top + rect.height / 2;
+
+                var dx = e.touches[0].clientX - centerX;
+                var dy = e.touches[0].clientY - centerY;
+                var distance = Math.sqrt(dx * dx + dy * dy);
+
+                var threshold = Math.min(rect.width, rect.height) * 0.35;
+
+                if (distance < threshold) {
+                    isRotating = false;
+                    startX = e.touches[0].clientX - pointX;
+                    startY = e.touches[0].clientY - pointY;
+                    setMode('translate');
+                } else {
+                    isRotating = true;
+                    lastAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX) * 180 / Math
+                        .PI;
+                    setMode('rotate');
+                }
+
+                swipeHistory = [];
+
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                isRotating = true;
+                setMode('rotate');
+
+                touchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+
+                touchStartAngle = Math.atan2(
+                    e.touches[0].clientY - e.touches[1].clientY,
+                    e.touches[0].clientX - e.touches[1].clientX
+                ) * 180 / Math.PI;
+            }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', function(e) {
+            if (!currentFilename) return;
+            e.preventDefault();
+
+            if (e.touches.length === 1 && isDragging) {
+                var rect = container.getBoundingClientRect();
+                var centerX = rect.left + rect.width / 2;
+                var centerY = rect.top + rect.height / 2;
+
+                if (isRotating) {
+                    var currentAngle = Math.atan2(
+                        e.touches[0].clientY - centerY,
+                        e.touches[0].clientX - centerX
+                    ) * 180 / Math.PI;
+
+                    var angleDiff = currentAngle - lastAngle;
+                    if (angleDiff > 180) angleDiff -= 360;
+                    if (angleDiff < -180) angleDiff += 360;
+
+                    rotation += angleDiff;
+                    lastAngle = currentAngle;
+                    updateTransform();
+                } else {
+                    pointX = e.touches[0].clientX - startX;
+                    pointY = e.touches[0].clientY - startY;
+                    updateTransform();
+                }
+
+                swipeHistory.push({
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                    time: Date.now()
+                });
+                if (swipeHistory.length > 10) swipeHistory.shift();
+
+            } else if (e.touches.length === 2) {
+                var dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                var factor = dist / touchStartDist;
+                scale = Math.max(0.2, Math.min(6, scale * factor));
+                touchStartDist = dist;
+
+                var currentAngle = Math.atan2(
+                    e.touches[0].clientY - e.touches[1].clientY,
+                    e.touches[0].clientX - e.touches[1].clientX
+                ) * 180 / Math.PI;
+
+                var angleDiff = currentAngle - touchStartAngle;
+                if (angleDiff > 180) angleDiff -= 360;
+                if (angleDiff < -180) angleDiff += 360;
+
+                rotation += angleDiff;
+                touchStartAngle = currentAngle;
+
+                updateTransform();
+            }
+        }, { passive: false });
+
+        container.addEventListener('touchend', function(e) {
+            if (isDragging && !isRotating && e.changedTouches.length > 0 && currentFilename) {
+                if (swipeHistory.length > 3) {
+                    var start = swipeHistory[0];
+                    var end = swipeHistory[swipeHistory.length - 1];
+                    var deltaX = end.x - start.x;
+                    var deltaY = end.y - start.y;
+                    var deltaTime = end.time - start.time;
+                    var distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    var speed = distance / deltaTime;
+
+                    var minDistance = 60;
+                    var minSpeed = 0.15;
+
+                    if (distance > minDistance && speed > minSpeed) {
+                        var ratio = Math.abs(deltaX) / Math.abs(deltaY);
+
+                        if (ratio > 1.5) {
+                            flipX = flipX === 1 ? -1 : 1;
+                            animateFlip();
+                            updateTransform();
+                            if (navigator.vibrate) navigator.vibrate(30);
+                            applyOperation('/apply/flip', { direction: 'h' });
+                        } else if (ratio < 0.67) {
+                            flipY = flipY === 1 ? -1 : 1;
+                            animateFlip();
+                            updateTransform();
+                            if (navigator.vibrate) navigator.vibrate(30);
+                            applyOperation('/apply/flip', { direction: 'v' });
+                        }
+                    }
+                }
+            }
+
+            isDragging = false;
+            isRotating = false;
+            setMode('translate');
+        }, { passive: true });
+        // ===== WHEEL / ZOOM =====
+        container.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            if (!currentFilename) return;
+            var zoomFactor = 0.1;
+            if (e.deltaY < 0) {
+                scale = Math.min(6, scale + zoomFactor);
+            } else {
+                scale = Math.max(0.2, scale - zoomFactor);
+            }
+            updateTransform();
+            applyOperation('/apply/zoom', { value: Math.round(scale * 100) });
+        }, { passive: false });
+        // ===== KEYBOARD SHORTCUTS =====
+        document.addEventListener('keydown', function(e) {
+            if (!currentFilename) return;
+            if (e.key === 'r' || e.key === 'R') { resetAll();
+                e.preventDefault(); }
+            if (e.key === 'h' || e.key === 'H') { flipImage('horizontal');
+                e.preventDefault(); }
+            if (e.key === 'v' || e.key === 'V') { flipImage('vertical');
+                e.preventDefault(); }
+            if (e.key === 'ArrowRight') { rotation += 5;
+                updateTransform();
+                e.preventDefault();
+                applyOperation('/apply/rotate', { value: rotation }); }
+            if (e.key === 'ArrowLeft') { rotation -= 5;
+                updateTransform();
+                e.preventDefault();
+                applyOperation('/apply/rotate', { value: rotation }); }
+            if (e.key === '+' || e.key === '=') { scale = Math.min(6, scale + 0.1);
+                updateTransform();
+                e.preventDefault();
+                applyOperation('/apply/zoom', { value: Math.round(scale * 100) }); }
+            if (e.key === '-') { scale = Math.max(0.2, scale - 0.1);
+                updateTransform();
+                e.preventDefault();
+                applyOperation('/apply/zoom', { value: Math.round(scale * 100) }); }
+            if (e.key === 'Escape') { closeHistogramModal(); }
+        });
+        // ===== DRAG & DROP =====
+        document.addEventListener('DOMContentLoaded', function() {
+            var dropZone = document.getElementById('image-frame');
+
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#006c49';
+                this.style.borderWidth = '3px';
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#bbcabf';
+                this.style.borderWidth = '1px';
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#bbcabf';
+                this.style.borderWidth = '1px';
+                var files = e.dataTransfer.files;
+                if (files.length > 0) handleFileUpload(files[0]);
+            });
+        });
+        // ===== INIT =====
+        updateInfoDisplay();
+        setMode('translate');
+        console.log('🚀 CitraLite ready!');
+    </script>
+</body>
+</html>
